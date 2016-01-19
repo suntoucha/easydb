@@ -3,9 +3,10 @@ package easydb
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"strings"
 )
 
 var (
@@ -118,4 +119,15 @@ func NamedExec(query string, arg interface{}) (sql.Result, error) {
 		return nil, errors.New("No connection to database")
 	}
 	return db.NamedExec(query, arg)
+}
+
+// Begin открывает транзакцию на мастере
+func Begin() (*sqlx.Tx, error) {
+	db := ChooseConnection("update")
+
+	if db == nil {
+		return nil, errors.New("No connection to database")
+	}
+
+	return db.Beginx()
 }
