@@ -121,6 +121,21 @@ func NamedExec(query string, arg interface{}) (sql.Result, error) {
 	return db.NamedExec(query, arg)
 }
 
+//-------------------------------------------------------------------------------------------------
+// Выполнение запросов на изменение
+//-------------------------------------------------------------------------------------------------
+func Exec(query string, args ...interface{}) (sql.Result, error) {
+	var (
+		db *sqlx.DB
+	)
+	db = ChooseConnection("update")
+
+	if db == nil {
+		return nil, errors.New("No connection to database")
+	}
+	return db.NamedExec(query, args...)
+}
+
 // Begin открывает транзакцию на мастере
 func Begin() (*sqlx.Tx, error) {
 	db := ChooseConnection("update")
