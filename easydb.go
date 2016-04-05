@@ -133,7 +133,7 @@ func Exec(query string, args ...interface{}) (sql.Result, error) {
 	if db == nil {
 		return nil, errors.New("No connection to database")
 	}
-	return db.NamedExec(query, args...)
+	return db.Exec(query, args...)
 }
 
 // Begin открывает транзакцию на мастере
