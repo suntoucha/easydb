@@ -99,6 +99,20 @@ func Select(dest interface{}, query string, args ...interface{}) error {
 	return db.Select(dest, query, args...)
 }
 
+// Query то же самое, что и sqlx.Queryx с выбором подходящей базы
+func Query(query string, args ...interface{}) (*sqlx.Rows, error) {
+	var (
+		db *sqlx.DB
+	)
+	db = ChooseConnection("select")
+
+	if db == nil {
+		return nil, errors.New("No connection to database")
+	}
+
+	return db.Queryx(query, args...)
+}
+
 //-------------------------------------------------------------------------------------------------
 // Замена /*condition*/ на условие запроса
 //-------------------------------------------------------------------------------------------------
