@@ -165,9 +165,7 @@ func Begin() (*sqlx.Tx, error) {
 	return db.Beginx()
 }
 
-//-------------------------------------------------------------------------------------------------
 // Инстанс базы данных
-//-------------------------------------------------------------------------------------------------
 type Instance struct {
 	mode string // master|slave
 	db   *sqlx.DB
@@ -182,7 +180,7 @@ func NewInstance(driverName, connectString, mode string) (*Instance, error) {
 
 	// При попытке записи в slave инстнас произойдет ошибка.
 	// Тем не менее, мастер позволяет читать
-	if mode != "master" && mode != "slave" {
+	if mode == "master" || mode == "slave" {
 		i.mode = mode
 	} else {
 		return nil, errors.New("Wrong mode for NewInstance")
