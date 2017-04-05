@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	master *sqlx.DB //Общий пул коннектов к мастеру
-	slave  *sqlx.DB //ОБщий пул коннектов к слейву
+	master *sqlx.DB // Общий пул коннектов к мастеру
+	slave  *sqlx.DB // Общий пул коннектов к слейву
 )
 
 //-------------------------------------------------------------------------------------------------
@@ -99,7 +99,9 @@ func Select(dest interface{}, query string, args ...interface{}) error {
 	return db.Select(dest, query, args...)
 }
 
+//-------------------------------------------------------------------------------------------------
 // Query то же самое, что и sqlx.Queryx с выбором подходящей базы
+//-------------------------------------------------------------------------------------------------
 func Query(query string, args ...interface{}) (*sqlx.Rows, error) {
 	var (
 		db *sqlx.DB
@@ -150,7 +152,9 @@ func Exec(query string, args ...interface{}) (sql.Result, error) {
 	return db.Exec(query, args...)
 }
 
+//-------------------------------------------------------------------------------------------------
 // Begin открывает транзакцию на мастере
+//-------------------------------------------------------------------------------------------------
 func Begin() (*sqlx.Tx, error) {
 	db := ChooseConnection("update")
 
@@ -159,4 +163,94 @@ func Begin() (*sqlx.Tx, error) {
 	}
 
 	return db.Beginx()
+}
+
+// Инстанс базы данных
+type Instance struct {
+	mode string // master|slave
+	db   *sqlx.DB
+}
+
+//-------------------------------------------------------------------------------------------------
+// Получение Инстанс
+//-------------------------------------------------------------------------------------------------
+func NewInstance(driverName, connectString, mode string) (*Instance, error) {
+	i := new(Instance)
+	db, err := sqlx.Connect(driverName, connectString)
+
+	// При попытке записи в slave инстнас произойдет ошибка.
+	// Тем не менее, мастер позволяет читать
+	if mode == "master" || mode == "slave" {
+		i.mode = mode
+	} else {
+		return nil, errors.New("Wrong mode for NewInstance")
+	}
+	i.db = db
+
+	return i, err
+}
+
+//-------------------------------------------------------------------------------------------------
+// Получение одного элемента из запроса
+//-------------------------------------------------------------------------------------------------
+func (s *Instance) Get(dest interface{}, query string, args ...interface{}) error {
+	return s.db.Get(dest, query, args...)
+}
+
+//-------------------------------------------------------------------------------------------------
+// Получение массива из запроса
+//-------------------------------------------------------------------------------------------------
+func (s *Instance) Select(dest interface{}, query string, args ...interface{}) error {
+	return s.db.Select(dest, query, args...)
+}
+
+//-------------------------------------------------------------------------------------------------
+// Query то же самое, что и sqlx.Queryx с выбором подходящей базы
+//-------------------------------------------------------------------------------------------------
+func (s *Instance) Query(query string, args ...interface{}) (*sqlx.Rows, error) {
+	if s.mode != "master" {
+		return nil, errors.New("Wrong instance selected. Slave instances do not support write ops")
+	}
+	return s.db.Queryx(query, args...)
+}
+
+//-------------------------------------------------------------------------------------------------
+// Выполнение запросов на изменение
+//-------------------------------------------------------------------------------------------------
+func (s *Instance) NamedExec(query string, arg interface{}) (sql.Result, error) {
+	if s.mode != "master" {
+		return nil, errors.New("Wrong instance selected. Slave instances do not support write ops")
+	}
+	return s.db.NamedExec(query, arg)
+}
+
+//-------------------------------------------------------------------------------------------------
+// Выполнение запросов на изменение
+//-------------------------------------------------------------------------------------------------
+func (s *Instance) Exec(query string, args ...interface{}) (sql.Result, error) {
+	if s.mode != "master" {
+		return nil, errors.New("Wrong instance selected. Slave instances do not support write ops")
+	}
+	return s.db.Exec(query, args...)
+}
+
+//-------------------------------------------------------------------------------------------------
+// Begin открывает транзакцию на мастере
+//-------------------------------------------------------------------------------------------------
+func (s *Instance) Begin() (*sqlx.Tx, error) {
+	if s.mode != "master" {
+		return nil, errors.New("Wrong instance selected. Slave instances do not support write ops")
+	}
+	return s.db.Beginx()
+}
+
+//-------------------------------------------------------------------------------------------------
+// Выполнение запросов на изменение
+//-------------------------------------------------------------------------------------------------
+func (s *Instance) Ping() error {
+	return s.db.Ping()
+}
+
+func (s *Instance) Role() string {
+	return s.mode
 }
