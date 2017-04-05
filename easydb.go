@@ -250,3 +250,7 @@ func (s *Instance) Begin() (*sqlx.Tx, error) {
 func (s *Instance) Ping() error {
 	return s.db.Ping()
 }
+
+func (s *Instance) Role() string {
+	return s.mode
+}
